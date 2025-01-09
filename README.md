@@ -96,6 +96,49 @@ def prepare_data():
 
 ## This project is in progress ...
 
+
+
+## Evaluation Metrics
+### 1. ROUGE
+- ROUGE（Recall-Oriented Understudy for Gisting Evaluation）是一个用于评估自动文本摘要和机器翻译质量的评估指标集合。它通过比较机器生成的摘要（候选摘要）与人工编写的参考摘要之间的重叠程度来进行评分。
+
+### 2. ROUGE的主要变体
+1. ROUGE-N
+- 这是最基本的ROUGE度量，其中N表示我们考虑的n-gram的长度。最常用的是ROUGE-1（单个词）和ROUGE-2（双词组合）。
+- ROUGE-N precision
+```python
+P = Count(overlapping n-grams) / Count(candidate n-grams)
+```
+
+- ROUGE-N recall
+```python
+R = Count(overlapping n-grams) / Count(reference n-grams)
+```
+
+- ROUGE-N F1-Score
+```python
+F1 = 2 * (P * R) / (P + R)
+```
+
+3. ROUGE-L
+- ROUGE-L基于最长公共子序列（LCS）计算，考虑句子级别的结构相似性。
+```python
+LCS(X,Y) = 最长公共子序列的长度  
+ROUGE-L_recall = LCS(X,Y) / |X|  
+ROUGE-L_precision = LCS(X,Y) / |Y|  
+ROUGE-L_F1 = ((1 + β²) * P * R) / (R + β² * P)
+```
+- 其中：
+    - X是参考摘要
+    - Y是候选摘要
+    - |X|和|Y|分别是它们的长度
+    - β通常设置为1.2
+
+5. Example
+
+
+
+---
 ## Configuration
 
 
