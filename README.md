@@ -108,6 +108,9 @@ def prepare_data():
 - ROUGE-N precision
 ```python
 P = Count(overlapping n-grams) / Count(candidate n-grams)
+# overlapping n-grams: 机器预测的摘要和金标准摘要之间，有多少个重叠的 n-grams ?
+# candidate n-grams: 机器预测的摘要中一共有多少个n-grams
+# 我们将机器预测出来的所有 n-grams 都视作 positives (True Positives + False Positives)
 ```
 
 - ROUGE-N recall
