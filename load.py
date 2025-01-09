@@ -9,8 +9,8 @@ def prepare_data():
     准备CNN/DailyMail数据集，并进行必要的预处理  
     """  
     # 加载数据集，只使用一小部分进行演示  
-    train_dataset = load_dataset("cnn_dailymail", "3.0.0", split="train[:1000]")  
-    val_dataset = load_dataset("cnn_dailymail", "3.0.0", split="validation[:100]")  
+    train_dataset = load_dataset("abisee/cnn_dailymail", "1.0.0").select(range(1000))
+    val_dataset = load_dataset("abisee/cnn_dailymail", "3.0.0").select(range(100))
     
     # 初始化tokenizer  
     from transformers import BertTokenizer  
