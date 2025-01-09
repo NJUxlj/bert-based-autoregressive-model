@@ -29,6 +29,7 @@ from torch.nn import CrossEntropyLoss
 
 from load import prepare_data
 from evaluation import compute_metrics
+from config import *
 
 class BertDecoder(BertPreTrainedModel):
     def __init__(self, config: BertConfig):  
@@ -49,12 +50,49 @@ class BertDecoder(BertPreTrainedModel):
         
         # 初始化权重  
         self.init_weights()  
+
+    def get_input_embeddings(self):  
+        """  
+        获取输入embeddings层  
+        """  
+        return self.embeddings.word_embeddings  
+    
+    def set_input_embeddings(self, value):  
+        """  
+        设置输入embeddings层  
+        """  
+        self.embeddings.word_embeddings = value  
+    
+    def get_output_embeddings(self):  
+        """  
+        获取输出embeddings层  
+        """  
+        return self.lm_head  
+    
+    def set_output_embeddings(self, new_embeddings):  
+        """  
+        设置输出embeddings层  
+        """  
+        self.lm_head = new_embeddings
         
     def get_causal_attention_mask(self, batch_size: int, seq_length: int, dtype: torch.dtype) -> torch.Tensor:  
         """  
         生成因果注意力掩码（上三角矩阵）  
         """  
         # 创建因果掩码：确保位置i只能注意到位置j<=i  
+        '''
+        这句代码的功能是生成一个上三角矩阵，
+        其中对角线及以下的元素为0，对角线以上的元素为1。
+
+        具体来说：
+        torch.ones((seq_length, seq_length), dtype=dtype) 创建一个形状为 (seq_length, seq_length) 的全1矩阵。
+        torch.triu(..., diagonal=1) 取这个矩阵的上三角部分（包括对角线），并将对角线以下的元素设置为0
+
+        0 1 1 1
+        0 0 1 1
+        0 0 0 1
+        0 0 0 0
+        '''
         mask = torch.triu(torch.ones((seq_length, seq_length), dtype=dtype), diagonal=1)  
         mask = mask.unsqueeze(0).expand(batch_size, -1, -1)  
         return mask  
@@ -95,13 +133,19 @@ class BertDecoder(BertPreTrainedModel):
         
         # 如果提供了attention_mask，则与因果掩码组合  
         if attention_mask is not None:  
-            attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  
-            attention_mask = attention_mask * (1.0 - causal_mask)  
+            # 确保attention_mask的形状正确 [batch_size, seq_length]  
+            if attention_mask.dim() == 2:  
+                extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  
+            else:
+                extended_attention_mask = attention_mask
+            
+            # 将attention_mask与因果掩码结合
+            extended_attention_mask = extended_attention_mask * (1.0 - causal_mask)  
         else:  
-            attention_mask = 1.0 - causal_mask  
+            extended_attention_mask = 1.0 - causal_mask  
             
         # 扩展attention_mask  
-        extended_attention_mask = attention_mask  
+        extended_attention_mask = extended_attention_mask  
         extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(self.dtype).min  
         
         # 初始化head_mask  
@@ -183,8 +227,9 @@ def main():
     train_dataset, val_dataset, tokenizer = prepare_data()  
     
     # 创建模型配置  
-    config = BertConfig.from_pretrained('bert-base-uncased')  
+    config = BertConfig.from_pretrained(MODEL_PATH)  
     config.vocab_size = len(tokenizer)  # 更新词表大小以适应新添加的特殊token  
+    config.num_attention_heads = 12  # 确保这个值与预训练模型一致 
     
     # 初始化模型  
     model = BertDecoder(config)  
