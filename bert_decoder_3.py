@@ -9,7 +9,7 @@ import re
 
 from transformers import BertTokenizer, BertModel
 
-
+from typing import List, Tuple, Dict, Optional, Any
 
 
 class BertDecoder(nn.Module):
@@ -43,7 +43,7 @@ class BertDecoder(nn.Module):
 
             x,_ = self.bert(x, attention_mask=mask) # x.shape = (batch_size, seq_len, hidden_size)
             y_pred = self.classify(x) # shape = (batch_size, seq_len, vocab_size)
-            self.loss(y_pred.view(-1, y_pred.size(2)), y.view(-1))
+            return self.loss(y_pred.view(-1, y_pred.size(2)), y.view(-1))
 
         else:
             #预测时，可以不使用mask
@@ -70,14 +70,37 @@ def load_corpus(path:str="vocab.txt")->str:
 
 
 
-def build_sample(tokenizer, window_size, corpus):
-    pass
+def build_sample(tokenizer:BertTokenizer, window_size, corpus)->Tuple[torch.LongTensor, torch.LongTensor]:
+    start = random.randint(0, len(corpus)-1-window_size)
+    end = start + window_size
+    window = corpus[start:end]
+    target = corpus[start+1:end+1]
+
+    x = tokenizer.encode(window)
+    y = tokenizer.encode(target)
+
+    return x,y
 
 
 
 
-def build_dataset(sample_length, tokenizer, window_size, corpus):
-    pass
+
+def build_dataset(sample_length, tokenizer, window_size, corpus)->Tuple[torch.LongTensor, torch.LongTensor]:
+    '''
+    sample_length: the number of samples you need
+    tokenizer: 
+    window_size: the fixed length of the source text
+    
+    '''
+    dataset_x = []
+    dataset_y = []
+
+    for i in range(sample_length):
+        x, y = build_sample(tokenizer, window_size, corpus)
+        dataset_x.append(x)
+        dataset_y.append(y)
+
+    return torch.LongTensor(dataset_x), torch.LongTensor(dataset_y)
 
 
 
