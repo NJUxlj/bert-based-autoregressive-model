@@ -11,6 +11,8 @@ from transformers import BertTokenizer, BertModel
 
 from typing import List, Tuple, Dict, Optional, Any
 
+from config import Config, MODEL_PATH
+
 
 class BertDecoder(nn.Module):
     def __init__(self, hidden_size, vocab_size, pretrain_model_path):
@@ -105,13 +107,16 @@ def build_dataset(sample_length, tokenizer, window_size, corpus)->Tuple[torch.Lo
 
 
 def build_model(vocab, char_dim, pretrain_model_path):
-    pass
-
+    model = BertDecoder(hidden_size=char_dim, vocab_size=len(vocab), pretrain_model_path=pretrain_model_path)
+    return model
 
 
 
  
 def generate_sentence(openings, model, tokenizer, window_size):
+    '''
+    Text generation test code
+    '''
     pass
 
 
@@ -126,9 +131,15 @@ def sampling_strategy(prob_distribution):
 
 
 def train(corpus_path, save_weight=True):
-    pass
+    epoch_num = 20        #训练轮数
+    batch_size = 128       #每次训练样本个数
+    train_sample = 10000   #每轮训练总共训练的样本总数
+    char_dim = 768        #每个字的维度
+    window_size = 10       #样本文本长度
+    vocab_size = 21128      #字表大小
+    learning_rate = 0.001  #学习率
 
-
+    pretrain_model_path = MODEL_PATH
 
 
 if __name__ == "__main__":
