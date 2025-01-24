@@ -1,16 +1,9 @@
-'''
 
-作业内容：实现单独的bert进行解码，生成文本
-
-需要用到mask，自定义并传入（使用np函数+bert.forward)
-
-改造 lstm语言模型生成文本
-
-'''
 import torch
 import torch.nn as nn
 from transformers import (  
     BertPreTrainedModel,   
+    BertTokenizer,
     BertConfig,  
     Trainer,   
     TrainingArguments,  
@@ -27,9 +20,9 @@ from typing import Optional, Tuple, Union
 import numpy as np  
 from torch.nn import CrossEntropyLoss  
 
-from load import prepare_data
-from evaluation import compute_metrics
-from config import *
+from ..data.load import prepare_data
+from ..evaluation.evaluator import compute_metrics
+from ..config.config import *
 
 class BertDecoder(BertPreTrainedModel):
     def __init__(self, config: BertConfig):  
@@ -237,7 +230,7 @@ def main():
     
     # 设置训练参数  
     training_args = TrainingArguments(  
-        output_dir="./bert_decoder_summarizer",  
+        output_dir="./output/bert_finetuned",  
         num_train_epochs=3,  
         per_device_train_batch_size=4,  
         per_device_eval_batch_size=4,  
@@ -274,7 +267,7 @@ def main():
     trainer.train()  
     
     # 保存模型  
-    trainer.save_model("./bert_decoder_summarizer_final") 
+    trainer.save_model("./output/bert_finetuned") 
 
 
 
