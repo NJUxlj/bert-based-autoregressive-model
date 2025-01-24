@@ -145,7 +145,7 @@ def generate_sentence(openings:str, model:BertDecoder, tokenizer:BertTokenizer, 
             x= torch.LongTensor([x]) # add the dimension of batch_size
             if torch.cuda.is_available():
                 x = x.cuda()
-            y = model.forward(x)[0][-1] # shape = (1, vocab_size)
+            y = model.forward(x)[0][-1] # shape = (vocab_size,)
             index = sampling_strategy(y)
             # 将索引 index 转换回对应的字符
             pred_char = "".join(tokenizer.decode([index]))
@@ -158,7 +158,7 @@ def generate_sentence(openings:str, model:BertDecoder, tokenizer:BertTokenizer, 
 def sampling_strategy(prob_distribution:torch.LongTensor):
     '''
     :param prob_distribution: 
-        the probability distribution of the next word, shape = (1, vocab_size)
+        the probability distribution of the next word, shape = (vocab_size, )
         type: LongTensor
     
     '''
@@ -168,9 +168,9 @@ def sampling_strategy(prob_distribution:torch.LongTensor):
         strategy = "sampling"
 
     if strategy == "greedy":
-        pass
+        return int(torch.argmax(prob_distribution))
     elif strategy == "sampling":
-        pass
+        return np.random.choice(list(range(len(prob_distribution))), p=prob_distribution.cpu().numpy())
     
 
 
@@ -216,8 +216,8 @@ def train(corpus_path, save_weight=True):
 
         print("=========\n第%d轮平均loss:%f" % (epoch + 1, np.mean(watch_loss)))
         print("=========\n第%d轮平均loss:%f" % (epoch + 1, np.mean(watch_loss)))
-        print(generate_sentence("让他在半年之前，就不能做出", model, tokenizer, window_size))
-        print(generate_sentence("李慕站在山路上，深深的呼吸", model, tokenizer, window_size))
+        print(generate_sentence("黄仁勋想卖RTX5090, 他觉得自己肯定有戏", model, tokenizer, window_size))
+        print(generate_sentence("黄仁勋掏出B200，觉得自己是天下第一", model, tokenizer, window_size))
 
 
     if not save_weight:
