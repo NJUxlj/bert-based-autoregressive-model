@@ -55,8 +55,18 @@ class BertDecoder(nn.Module):
 
 
 
+# def build_vocab(vocab_path)->Dict[str, int]:
+#     vocab = {'<pad>':0}
+#     with open() as f:
+#         for index, line in enumerate(f):
+#             char = line[:-1]
+#             vocab[char] = index+1
+#     return vocab
 
-def load_corpus(path:str="vocab.txt")->str:
+
+
+
+def load_corpus(path:str)->str:
     '''
     return a string, which is our corpus
     '''
@@ -106,8 +116,13 @@ def build_dataset(sample_length, tokenizer, window_size, corpus)->Tuple[torch.Lo
 
 
 
-def build_model(vocab, char_dim, pretrain_model_path):
-    model = BertDecoder(hidden_size=char_dim, vocab_size=len(vocab), pretrain_model_path=pretrain_model_path)
+def build_model(vocab_size=21128, char_dim=768, pretrain_model_path=MODEL_PATH):
+    '''
+    vocab: the vocabulary dict
+
+    char_dim: the dimension of each char == hidden_dim
+    '''
+    model = BertDecoder(hidden_size=char_dim, vocab_size=vocab_size, pretrain_model_path=pretrain_model_path)
     return model
 
 
@@ -117,14 +132,32 @@ def generate_sentence(openings, model, tokenizer, window_size):
     '''
     Text generation test code
     '''
-    pass
+    model.eval()
+    with torch.no_grad():
+        pred_char = ""
+        # the iteration is terminated if the generated text exceeds 30 words, or a new line character is generated
+        while pred_char != '\n' or len(openings)<=30:
+            pass
 
+
+
+    
+    return openings
 
 
 
 
 def sampling_strategy(prob_distribution):
-    pass
+    if random.random() > 0.1:
+        strategy = "greedy"
+    else:
+        strategy = "sampling"
+
+    if strategy == "greedy":
+        pass
+    elif strategy == "sampling":
+        pass
+    
 
 
 
@@ -141,6 +174,43 @@ def train(corpus_path, save_weight=True):
 
     pretrain_model_path = MODEL_PATH
 
+    tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+
+    corpus = load_corpus(corpus_path)    
+
+    model  = build_model()
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    optim = torch.optim.Adam(model.parameters(), lr=learning_rate)   
+    print("model loaded, start training")
+
+
+    for epoch in range(epoch_num):
+        model.train()
+        watch_loss = []
+        for batch in range(int(train_sample / batch_size)):
+            x, y = build_dataset(batch_size, tokenizer, window_size, corpus) #构建一组训练样本
+            if torch.cuda.is_available():
+                x, y = x.cuda(), y.cuda()
+            optim.zero_grad()   
+            loss = model.forward(x, y)  
+            loss.backward()
+            optim.step()
+
+            watch_loss.append(loss.item())
+
+        print("=========\n第%d轮平均loss:%f" % (epoch + 1, np.mean(watch_loss)))
+        print("=========\n第%d轮平均loss:%f" % (epoch + 1, np.mean(watch_loss)))
+        print(generate_sentence("让他在半年之前，就不能做出", model, tokenizer, window_size))
+        print(generate_sentence("李慕站在山路上，深深的呼吸", model, tokenizer, window_size))
+
+
+    if not save_weight:
+        return
+    else:
+        pass
 
 if __name__ == "__main__":
-    load_corpus()
+    # load_corpus()
+    train('corpus.txt', False)
