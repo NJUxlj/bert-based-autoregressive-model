@@ -32,6 +32,7 @@
 
 
 ## This project is in progress ...
+- The first version `bert_decoder_3.py` is finished.
 
 
 
@@ -91,6 +92,7 @@ python bert_decoder_3.py
 
 
 ## Training Snapshot
+![training](training.png)
 
 
 ## Results

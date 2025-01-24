@@ -127,12 +127,15 @@ def train(corpus_path, save_weight=True):
     train_sample = 10000   #每轮训练总共训练的样本总数
     char_dim = 768        #每个字的维度
     window_size = 10       #样本文本长度
-    vocab_size = 21128      #字表大小
+    # vocab_size = 30522 # 21128      #字表大小
     learning_rate = 0.001  #学习率
     
 
     pretrain_model_path = r'F:\Desktop\work_space\pretrain_models\bert-base-chinese'
-    tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+    tokenizer:BertTokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+
+    vocab_size = len(tokenizer.vocab)
+
 
     corpus = load_corpus(corpus_path)     #加载语料
     model = build_model(vocab_size, char_dim, pretrain_model_path)    #建立模型

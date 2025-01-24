@@ -48,12 +48,12 @@ class BertDecoder(nn.Module):
 
             x,_ = self.bert(x, attention_mask=mask) # x.shape = (batch_size, seq_len, hidden_size)
             y_pred = self.classify(x) # shape = (batch_size, seq_len, vocab_size)
-            return self.loss(y_pred.view(-1, y_pred.size(2)), y.view(-1))
+            return self.loss(y_pred.view(-1, y_pred.shape[-1]), y.view(-1))
 
         else:
             #预测时，可以不使用mask
             x, _ = self.bert.forward(x) 
-            y_pred = self.classify(x)
+            y_pred = self.classify(x)   #output shape:(batch_size, vocab_size)
             return torch.softmax(y_pred, dim=-1)
 
 
@@ -91,9 +91,8 @@ def build_sample(tokenizer:BertTokenizer, window_size, corpus)->Tuple[torch.Long
     window = corpus[start:end]
     target = corpus[start+1:end+1]
 
-    x = tokenizer.encode(window)
-    y = tokenizer.encode(target)
-
+    x = tokenizer.encode(window, add_special_tokens=False, padding="max_length", truncation=True, max_length=50)
+    y = tokenizer.encode(target, add_special_tokens=False, padding="max_length", truncation=True, max_length=50)
     return x,y
 
 
@@ -139,16 +138,23 @@ def generate_sentence(openings:str, model:BertDecoder, tokenizer:BertTokenizer, 
     with torch.no_grad():
         pred_char = ""
         # the iteration is terminated if the generated text exceeds 30 words, or a new line character is generated
-        while pred_char != '\n' or len(openings)<=30:
-            openings+=pred_char
-            x:List[int] = tokenizer.encode(openings, add_special_tokens=False) # shape = (1, seq_len)
+        while pred_char != '\n' and len(openings)<=50:
+            openings += pred_char
+            x:List[int] = tokenizer.encode(
+                    openings, 
+                    add_special_tokens=False,
+                    # padding="max_length",  
+                    # truncation=True,  
+                    # max_length=30,  # 使用与训练时相同的max_length  
+                ) # shape = (1, seq_len)
+            
             x= torch.LongTensor([x]) # add the dimension of batch_size
             if torch.cuda.is_available():
                 x = x.cuda()
             y = model.forward(x)[0][-1] # shape = (vocab_size,)
-            index = sampling_strategy(y)
+            index = int(sampling_strategy(y))
             # 将索引 index 转换回对应的字符
-            pred_char = "".join(tokenizer.decode([index]))
+            pred_char = "".join(tokenizer.decode(index))
     
     return openings
 
@@ -162,7 +168,7 @@ def sampling_strategy(prob_distribution:torch.LongTensor):
         type: LongTensor
     
     '''
-    if random.random() > 0.1:
+    if random.random() > 0.5:
         strategy = "greedy"
     else:
         strategy = "sampling"
@@ -170,7 +176,8 @@ def sampling_strategy(prob_distribution:torch.LongTensor):
     if strategy == "greedy":
         return int(torch.argmax(prob_distribution))
     elif strategy == "sampling":
-        return np.random.choice(list(range(len(prob_distribution))), p=prob_distribution.cpu().numpy())
+        prob_distribution = prob_distribution.cpu().numpy()
+        return np.random.choice(list(range(len(prob_distribution))), p=prob_distribution)
     
 
 
@@ -178,21 +185,22 @@ def sampling_strategy(prob_distribution:torch.LongTensor):
 
 
 def train(corpus_path, save_weight=True):
-    epoch_num = 20        #训练轮数
+    epoch_num = 10        #训练轮数
     batch_size = 128       #每次训练样本个数
     train_sample = 10000   #每轮训练总共训练的样本总数
     char_dim = 768        #每个字的维度
     window_size = 10       #样本文本长度
-    vocab_size = 21128      #字表大小
+    # vocab_size = 21128      #字表大小
     learning_rate = 0.001  #学习率
 
     pretrain_model_path = MODEL_PATH
 
     tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
-
+    vocab_size = len(tokenizer.vocab)   
+    print("vocab_size = ", vocab_size)
     corpus = load_corpus(corpus_path)    
 
-    model  = build_model()
+    model  = build_model(vocab_size,char_dim, pretrain_model_path)
 
     if torch.cuda.is_available():
         model = model.cuda()
