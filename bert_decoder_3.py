@@ -30,6 +30,9 @@ class BertDecoder(nn.Module):
         '''
         x.shape = (batch_size, seq_len)
         y.shape = (batch_size, seq_len)
+
+        return loss or y_pred
+            y_pred.shape = (batch_size, seq_len, vocab_size)
         '''
         if y!=None:
             # 构建下三角矩阵, 对角线以下全为1，且包括对角线也是1
@@ -128,7 +131,7 @@ def build_model(vocab_size=21128, char_dim=768, pretrain_model_path=MODEL_PATH):
 
 
  
-def generate_sentence(openings, model, tokenizer, window_size):
+def generate_sentence(openings:str, model:BertDecoder, tokenizer:BertTokenizer, window_size):
     '''
     Text generation test code
     '''
@@ -137,17 +140,28 @@ def generate_sentence(openings, model, tokenizer, window_size):
         pred_char = ""
         # the iteration is terminated if the generated text exceeds 30 words, or a new line character is generated
         while pred_char != '\n' or len(openings)<=30:
-            pass
-
-
-
+            openings+=pred_char
+            x:List[int] = tokenizer.encode(openings, add_special_tokens=False) # shape = (1, seq_len)
+            x= torch.LongTensor([x]) # add the dimension of batch_size
+            if torch.cuda.is_available():
+                x = x.cuda()
+            y = model.forward(x)[0][-1] # shape = (1, vocab_size)
+            index = sampling_strategy(y)
+            # 将索引 index 转换回对应的字符
+            pred_char = "".join(tokenizer.decode([index]))
     
     return openings
 
 
 
 
-def sampling_strategy(prob_distribution):
+def sampling_strategy(prob_distribution:torch.LongTensor):
+    '''
+    :param prob_distribution: 
+        the probability distribution of the next word, shape = (1, vocab_size)
+        type: LongTensor
+    
+    '''
     if random.random() > 0.1:
         strategy = "greedy"
     else:
@@ -209,7 +223,10 @@ def train(corpus_path, save_weight=True):
     if not save_weight:
         return
     else:
-        pass
+        base_name = os.path.basename(corpus_path).replace('txt', 'pth')
+        model_path = os.path.join('model', base_name)
+        torch.save(model.state_dict(), model_path)
+        return 
 
 if __name__ == "__main__":
     # load_corpus()
