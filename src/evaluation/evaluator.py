@@ -17,7 +17,7 @@ def compute_metrics(eval_preds):
     predictions = np.argmax(predictions, axis=-1)  
     
     # 解码预测结果和标签  
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  
+    tokenizer:BertTokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)  
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)  
     
