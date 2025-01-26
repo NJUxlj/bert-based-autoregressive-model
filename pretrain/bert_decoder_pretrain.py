@@ -11,7 +11,7 @@ from transformers import BertTokenizer, BertModel
 
 from typing import List, Tuple, Dict, Optional, Any
 
-from config import Config, MODEL_PATH
+from ..config.config import Config, MODEL_PATH
 
 
 class BertDecoder(nn.Module):
