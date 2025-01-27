@@ -48,15 +48,37 @@
 1. before running, you should manually copy the `vocab.txt` file from the bert-base-uncased directory to the this project directory.
 
 
+
 ## Run
+- pretrain:
 ```bash
-python bert_decoder_3.py
+cd pretrain 
+python bert_decoder_pretrain.py
+```
+
+- sft:
+```bash
+cd sft
+python bert_decoder_sft.py
 ```
 
 
-
-## Training Snapshot
+## Pre-training Snapshot (pytorch only)
 ![training](image/training.png)
 
 
+
+
+## SFT snapshot (pytorch only)
+
+
+## SFT snapshot (transformers only)
+
 ## Results
+
+
+
+
+
+## Other things:
+- if you want to create your own corpus, you can just copy any text from the internet and paste it into a txt file, then you can run the `clean_corpus.py` to clean the corpus.

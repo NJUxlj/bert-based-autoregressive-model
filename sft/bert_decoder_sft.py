@@ -15,7 +15,11 @@ from transformers import BertTokenizer, BertModel
 
 from typing import List, Tuple, Dict, Optional, Any
 
-from ..config.config import Config, MODEL_PATH
+
+
+import sys
+sys.path.append("../")
+from config.config import Config, MODEL_PATH
 
 
 '''
@@ -38,10 +42,12 @@ class BertDecoder(nn.Module):
 
         self.bert:BertModel= BertModel.from_pretrained(pretrain_model_path, return_dict=False)
         self.classify = nn.Linear(hidden_size, vocab_size)
-        self.loss = nn.functional.cross_entropy
+        # self.loss = nn.functional.cross_entropy
+        # 计算loss时，忽略target中值为-1的那些位置，使他们不参与loss的计算
+        self.loss = nn.CrossEntropyLoss(ignore_index=-1)
      
 
-    def forward(self, x, y=None):
+    def forward(self, x, y=None, mask = None):
         '''
         x.shape = (batch_size, seq_len)
         y.shape = (batch_size, seq_len)
@@ -51,7 +57,7 @@ class BertDecoder(nn.Module):
         '''
         if y!=None:
 
-            mask = torch.tril(torch.ones((x.shape[0], x.shape[1], x.shape[1])))
+            # mask = torch.tril(torch.ones((x.shape[0], x.shape[1], x.shape[1])))
             if torch.cuda.is_available():
                 mask = mask.cuda()
 
@@ -121,7 +127,7 @@ def build_sample(tokenizer: BertTokenizer, corpus, window_size)->Tuple[torch.Lon
     return x, y, mask
 
 
-def build_dataset(tokenizer, corpus: List[List[str]], max_length, batch_size)->Tuple[torch.LongTensor, torch.LongTensor]:
+def build_dataset(tokenizer, corpus: List[List[str]], max_length, batch_size)->DataLoader:
     '''
     return dataset_x, dataset_y, dataset_mask
         - dataset_x.shape = (batch_size, window_size)
@@ -151,9 +157,9 @@ def build_dataset(tokenizer, corpus: List[List[str]], max_length, batch_size)->T
         x = torch.LongTensor(x)
         y = torch.LongTensor(y)
         
-        return [x, mask, y]
+        dataset.append([x, mask, y])
         
-    return DataLoader()
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
 
 
@@ -207,6 +213,22 @@ def pad_mask(mask:torch.LongTensor, target_shape:Tuple[int, int])->torch.LongTen
     
     return tensor.shape = target_shape
     '''
+    # original mask's hight and weight
+    h = mask.shape[0]
+    w = mask.shape[1]
+    target_h, target_w = target_shape
+    
+    result = torch.zeros(target_shape, dtype=mask.dtype, device=mask.device)
+    h_start = 0
+    w_start = 0
+    
+    h_end = min(h, target_h)   
+    w_end = min(w, target_w)
+    
+    # put the original mask into the all-zero padded mask
+    result[h_start:h_end, w_start:w_end] = mask[:h_end-h_start, :w_end-w_start]
+    
+    return result
 
 
 def build_model(vocab, char_dim, pretrain_model_path):
@@ -253,24 +275,27 @@ def sampling_strategy(probability_distribution:torch.LongTensor):
 
 
 def main(corpus_path, save_weight=True):
-    epoch_num = 20        #训练轮数
+    epoch_num = 10        #训练轮数
     batch_size = 32       #每次训练样本个数
     char_dim = 768        #每个字的维度
-    max_length = 50       #样本文本长度
-    vocab_size = 21128      #字表大小
+    max_length = 100       #样本文本长度
+    # vocab_size = 21128      #字表大小
     learning_rate = 0.001  #学习率
     
 
     pretrain_model_path = MODEL_PATH
     tokenizer = BertTokenizer.from_pretrained(pretrain_model_path)
+    
+    vocab_size = len(tokenizer.vocab)   
+    print("vocab_size = ", vocab_size)
 
     corpus = load_corpus(corpus_path)     #加载语料
-    train_data = build_dataset(tokenizer, corpus, max_length, batch_size)  #建立数据集
-    model = build_model(vocab_size, char_dim, pretrain_model_path)    #建立模型
+    train_data:DataLoader = build_dataset(tokenizer, corpus, max_length, batch_size)  #建立数据集
+    model = build_model(tokenizer.vocab, char_dim, pretrain_model_path)    #建立模型
     if torch.cuda.is_available():
         model = model.cuda()
     optim = torch.optim.Adam(model.parameters(), lr=learning_rate)   #建立优化器
-    print("文本词表模型加载完毕，开始训练")
+    print("Text model loaded，start training")
     for epoch in range(epoch_num):
         model.train()
         watch_loss = []
@@ -278,11 +303,11 @@ def main(corpus_path, save_weight=True):
             if torch.cuda.is_available():
                 x, mask, y = x.cuda(), mask.cuda(), y.cuda()
             optim.zero_grad()    #梯度归零
-            loss = model(x, mask, y)   #计算loss
+            loss = model.forward(x, mask, y)   #计算loss
             loss.backward()      #计算梯度
             optim.step()         #更新权重
             watch_loss.append(loss.item())
-        print("=========\n第%d轮平均loss:%f" % (epoch + 1, np.mean(watch_loss)))
+        print("=========\nEpoch(%d), average loss:%f" % (epoch + 1, np.mean(watch_loss)))
         print(generate_sentence("北京明年拟推工作日半价观看电影", model, tokenizer))
         print(generate_sentence("南京一合金厂锅炉发生爆炸", model, tokenizer))
     if not save_weight:

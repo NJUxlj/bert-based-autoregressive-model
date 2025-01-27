@@ -36,7 +36,7 @@ class LanguageModel(nn.Module):
             return self.loss(y_pred.view(-1, y_pred.shape[-1]), y.view(-1))
         else:
             #预测时，可以不使用mask
-            x, _ = self.bert(x)
+            x, _ = self.bert.forward(x)
             y_pred = self.classify(x)   #output shape:(batch_size, vocab_size)
             return torch.softmax(y_pred, dim=-1)
 
