@@ -47,7 +47,7 @@ class BertDecoder(nn.Module):
         self.loss = nn.CrossEntropyLoss(ignore_index=-1)
      
 
-    def forward(self, x, y=None, mask = None):
+    def forward(self, x,  mask = None, y=None):
         '''
         x.shape = (batch_size, seq_len)
         y.shape = (batch_size, seq_len)
@@ -308,8 +308,8 @@ def main(corpus_path, save_weight=True):
             optim.step()         #更新权重
             watch_loss.append(loss.item())
         print("=========\nEpoch(%d), average loss:%f" % (epoch + 1, np.mean(watch_loss)))
-        print(generate_sentence("北京明年拟推工作日半价观看电影", model, tokenizer))
-        print(generate_sentence("南京一合金厂锅炉发生爆炸", model, tokenizer))
+        print(generate_sentence("北京明年拟推工作日半价观看电影", model, tokenizer, max_length))
+        print(generate_sentence("南京一合金厂锅炉发生爆炸", model, tokenizer, max_length))
     if not save_weight:
         return
     else:
@@ -326,7 +326,7 @@ def main(corpus_path, save_weight=True):
 
 
 if __name__ == '__main__':
-    main("../sample_sft_data.json", save_weight=False)
+    main("./sample_sft_data.json", save_weight=False)
 
 
 
