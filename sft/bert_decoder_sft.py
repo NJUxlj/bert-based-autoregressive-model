@@ -61,7 +61,7 @@ class BertDecoder(nn.Module):
             if torch.cuda.is_available():
                 mask = mask.cuda()
 
-            x,_ = self.bert(x, attention_mask=mask) # x.shape = (batch_size, seq_len, hidden_size)
+            x,_ = self.bert.forward(x, attention_mask=mask) # x.shape = (batch_size, seq_len, hidden_size)
             y_pred = self.classify(x) # shape = (batch_size, seq_len, vocab_size)
             return self.loss(y_pred.view(-1, y_pred.shape[-1]), y.view(-1))
 
@@ -244,11 +244,12 @@ def generate_sentence(openings, model:BertDecoder, tokenizer:BertTokenizer, max_
         pre_char =  ""
         while pre_char!='\n' and len(openings)<max_length:
             # 生成下一个字
-            x = tokenizer.encode(openings, add_special_tokens=False, return_tensors="pt")
+            x:List[int] = tokenizer.encode(openings, add_special_tokens=True)
+            x= torch.LongTensor([x]) # shape = (1, seq_len)
             if torch.cuda.is_available():
                 x = x.cuda()
                 
-            pred = model.forward(x.unsqueeze(0))[0][-1]
+            pred = model.forward(x)[0][-1]
             token_id = sampling_strategy(pred)
             
             pred_char = tokenizer.decode(token_id)

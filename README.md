@@ -70,7 +70,7 @@ python bert_decoder_sft.py
 
 
 ## SFT snapshot (pytorch only)
-
+![sft_pytorch](image/sft_pytorch.png)
 
 ## SFT snapshot (transformers only)
 

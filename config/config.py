@@ -3,7 +3,7 @@
 
 Config = {
     "dataset_path":"./data/cnn_dailymail",
-    "model_path":"/root/autodl-tmp/models/bert-base-uncased",
+    "model_path":"/root/autodl-tmp/models/bert-base-chinese",
     "processed_dataset_path":"./data/processed",
 }
 
